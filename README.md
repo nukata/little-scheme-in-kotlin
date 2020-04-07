@@ -99,6 +99,21 @@ Put a "`-`" after the script in the command line to begin a session
 after running the script.
 
 ```
+$ cat ../little-scheme/examples/fib90.scm 
+;; Fibonacci numbers: F(n) = F(n-1) + F(n-2) with F(0) = 0 and F(1) = 1. 
+;; cf. https://oeis.org/A000045
+(define fibonacci
+  (lambda (n)
+    (define _fib
+      (lambda (i F_i F_i+1)
+        (if (= i n)
+            F_i
+          (_fib (+ i 1) F_i+1 (+ F_i F_i+1)))))
+    (_fib 0 0 1)))                      ; i=0, F(0)=0, F(1)=1
+
+(display (fibonacci 90))
+(newline)
+;; => 2880067194370816120
 $ java -jar scm.jar ../little-scheme/examples/fib90.scm -
 2880067194370816120
 > (globals)
@@ -173,8 +188,8 @@ For simplicity, this Scheme treats (`define` _v_ _e_) as an expression type.
 - `(globals)` returns a list of keys of the global environment.
   It is not in the standards.
 
-See [`GLOBAL_ENV`](scm.kt#L235-L265)
+See [`GLOBAL_ENV`](scm.kt#L249-L279)
 in `scm.kt` for the implementation of the procedures
 except `call/cc` and `apply`.  
 `call/cc` and `apply` are implemented particularly at 
-[`applyFunction`](scm.kt#L433-L476) in `scm.kt`.
+[`applyFunction`](scm.kt#L447-L489) in `scm.kt`.

@@ -1,28 +1,37 @@
-// A Little Scheme in Kotlin 1.3, v0.1 R02.04.07 by SUZUKI Hisao
+// A Little Scheme in Kotlin 1.3, v0.2 R02.04.07 by SUZUKI Hisao
 package little_scheme
 
 // Cons cell
-// For any x: Cell, x.sumBy{1} returns the length of x as a list.
 class Cell(val car: Any?, var cdr: Any?): Sequence<Any?> {
     override fun toString() = "($car . $cdr)"
 
     // Yield car, cadr, caddr and so on.
-    override fun iterator(): Iterator<Any?> = sequence {
+    override fun iterator() = object: Iterator<Any?> {
         var j: Any? = this@Cell
-        while (j is Cell) {
-            yield(j.car)
-            j = j.cdr
+
+        override fun hasNext() = (if (j === null) false
+                                  else if (j is Cell) true
+                                  else throw ImproperListException(j!!))
+
+        override fun next(): Any? {
+            val c = j as Cell
+            j = c.cdr
+            return c.car
         }
-        if (j !== null) {
-            throw ImproperListException(j)
-        }
-    }.iterator()
+    }
+    // N.B. sequence { ... yield(j.car) ... }.iterator() is slow.
+
+    // Length of the list
+    val size: Int get() = sumBy {1}
 }
 
 // The last tail of the list is not null.
 data class ImproperListException(val tail: Any): RuntimeException()
 
+// Get the first element of x as a list.
 fun fst(x: Cell?): Any? = x!!.car
+
+// Get the second element of x as a list.
 fun snd(x: Cell?): Any? = (x!!.cdr as Cell).car
 
 //----------------------------------------------------------------------
@@ -53,13 +62,18 @@ val CALLCC = Sym.of("call/cc")
 // Linked list of bindings which map symbols to values
 class Env(val sym: Sym?, var value: Any?, var next: Env?): Sequence<Env> {
     // Yield each binding.
-    override fun iterator(): Iterator<Env> = sequence<Env> {
+    override fun iterator() = object: Iterator<Env> {
         var env: Env? = this@Env
-        while (env is Env) {
-            yield(env)
-            env = env.next
+
+        override fun hasNext() = (env !== null)
+
+        override fun next(): Env {
+            val current = env!!
+            env = env!!.next
+            return current
         }
-    }.iterator()
+    }
+    // N.B. sequence<env> { ... yield(env) ... }.iterator() is slow.
 
     // Search the binding for a symbol.
     fun lookFor(symbol: Sym): Env =
@@ -450,8 +464,7 @@ fun applyFunction(function: Any?, arguments: Cell?,
     when (fnc) {
         is Intrinsic -> {
             if (fnc.arity >= 0 &&
-                if (arg === null) fnc.arity > 0 else (arg.sumBy{1} !=
-                                                          fnc.arity)) {
+                if (arg === null) fnc.arity > 0 else (arg.size != fnc.arity)) {
                 throw RuntimeException(
                     "arity not matched: ${fnc} and ${stringify(arg)}")
             }
